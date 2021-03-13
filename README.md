@@ -4,7 +4,7 @@
 
 # FileTransformer
 
-A tool for converting any type of file to and from Base64 text-based file with an encryption option.
+A tool for converting any type of file to and from Base64 text-based file with an option to use encryption.
 
 Latest version: [1.0.0](https://github.com/MichaelYochpaz/FileTransformer/releases/tag/v1.0.0)
 
