@@ -4,8 +4,7 @@
 
 # FileTransformer
 
-A tool for converting files to text based files with an option for encrypting, and an option to restore the original file using the converted file.  
-The tool uses Base64 to store file data as text, and Hex for file storing header and footer data.
+A tool for converting any type of file to and from Base64 text-based file with an encryption option.
 
 Latest version: [1.0.0](https://github.com/MichaelYochpaz/FileTransformer/releases/tag/v1.0.0)
 
