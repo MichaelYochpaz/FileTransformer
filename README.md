@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="#"><img src="Resources/logo.svg" width="192" a="https://github.com/MichaelYochpaz/FileTransformer"></a>
+  <a href="#"><img src="Resources/logo.svg" width="192"></a>
 </p>
 
 # FileTransformer
