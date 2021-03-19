@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="#"><img src="Resources/logo.svg" width="192"></a>
+  <a href="#"><img src="Resources/logo.svg" width="128"></a>
 </p>
 
 # FileTransformer
