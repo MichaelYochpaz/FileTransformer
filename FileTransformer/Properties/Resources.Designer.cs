@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FileTransformer.Properties {
+namespace FileTransformerNS.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace FileTransformer.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("FileTransformer.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("FileTransformerNS.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -63,9 +63,39 @@ namespace FileTransformer.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap GitHub_Logo_png {
+        internal static System.Drawing.Bitmap about_icon {
             get {
-                object obj = ResourceManager.GetObject("GitHub_Logo.png", resourceCulture);
+                object obj = ResourceManager.GetObject("about_icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap download_icon {
+            get {
+                object obj = ResourceManager.GetObject("download_icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap exit_icon {
+            get {
+                object obj = ResourceManager.GetObject("exit_icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap GitHub_logo_png {
+            get {
+                object obj = ResourceManager.GetObject("GitHub_logo.png", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

@@ -1,0 +1,14 @@
+﻿<Window x:Class="FileTransformerNS.UpdateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FileTransformerNS"
+        mc:Ignorable="d"
+        Title="Update Available" Height="130" Width="200" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Icon="Resources/download_icon.png">
+    <Grid>
+        <Label x:Name="current_version_label" Content="Current version:" Margin="30,2,10,0" VerticalAlignment="Top"/>
+        <Label x:Name="new_version_label" Content="New version:" Margin="30,22,10,0" VerticalAlignment="Top"/>
+        <Button x:Name="download_button" Content="Go To Download" Margin="30,55,30,0" Click="download_button_Click" Height="25" VerticalAlignment="Top"/>
+    </Grid>
+</Window>

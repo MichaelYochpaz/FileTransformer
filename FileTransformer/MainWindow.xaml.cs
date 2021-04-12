@@ -5,459 +5,365 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using Microsoft.WindowsAPICodePack.Dialogs;
+using Microsoft.Win32;
 using System.IO;
-using System.Security.Cryptography;
-using System.ComponentModel;
 using System.Threading;
+using System.Security.Cryptography;
+using System.Reflection;
 
-namespace FileTransformer
+namespace FileTransformerNS
 {
-    public enum FileTransformMode
-    {
-        Transform,
-        Restore
-    }
-
     public partial class MainWindow : Window
     {
-        const int WINDOW_HEIGHT = 315, WINDOW_HEIGHT_FULL = 390;
-
-        // (CHUNK_SIZE * 8 % 6 == 0) needs to be true to work since a 1 Base64 character = 6 bits
-        const int CHUNK_SIZE = 3145728; // = 3MB
-        const int HEADER_SIZE = 512, FOOTER_SIZE = 64 ; // in bytes
+        #region Configuration
+        const int WINDOW_HEIGHT = 345, WINDOW_HEIGHT_FULL = 430;
         const string DEFAULT_ENCRYPTION_KEY = "FileTransformer";
-        const string CANCEL_MESSAGE = "Operation cancelled.";
+        #endregion
 
-        private string filePath, savePath, encryptionKey;
+        private string[] filesPaths, filesNames;
+        private string savePath, encryptionKey, extension;
         private byte[] encryptionKeyBytes;
-        private bool encrypted = false;
+        private int TransformedFilesListIndex;
+        private bool isCurrentlyRunning = false;
+        private FileTransformer.Mode conversionMode = FileTransformer.Mode.Transform;
+        private List<(string fileName, string fileSize)> TransformedFilesList;
         private CancellationTokenSource cts = new CancellationTokenSource();
-
 
         public MainWindow()
         {
             InitializeComponent();
             this.Height = WINDOW_HEIGHT;
-            cancel_button.Visibility = Visibility.Hidden;
+            extension_textBox.Visibility = Visibility.Hidden;
+            right_arrow_button.Visibility = Visibility.Hidden;
+            left_arrow_button.Visibility = Visibility.Hidden;
+            ResetWindow("Transform");
         }
 
-        private void GitHub_image_MouseUp(object sender, MouseButtonEventArgs e)
+        private void ResetWindow(string actionButtonText)
         {
-            System.Diagnostics.Process.Start("https://github.com/MichaelYochpaz/FileTransformer");
+            progressBar.Value = 0;
+            isCurrentlyRunning = false;
+            action_button.Content = actionButtonText;
+            tabControl.IsEnabled = true;
+            cts = new CancellationTokenSource();
+            TransformedFilesListIndex = 0;
+            left_arrow_button.Visibility = Visibility.Hidden;
+            right_arrow_button.Visibility = Visibility.Hidden;
+        }
+
+        private void tabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            TabItem selected = (tabControl.SelectedItem as TabItem);
+
+            selected.Foreground = new SolidColorBrush(Colors.Black);
+
+            if (selected.Name == "restore_tabItem")
+            {
+                transform_tabItem.Foreground = new SolidColorBrush(Colors.White);
+                extension_checkBox.Visibility = Visibility.Hidden;
+                extension_textBox.Visibility = Visibility.Hidden;
+                action_button.Content = "Restore";
+                conversionMode = FileTransformer.Mode.Restore;
+            }
+
+            else if (selected.Name == "transform_tabItem")
+            {
+                restore_tabItem.Foreground = new SolidColorBrush(Colors.White);
+                extension_checkBox.Visibility = Visibility.Visible;
+
+                if (extension_checkBox.IsChecked ?? true)
+                    extension_textBox.Visibility = Visibility.Visible;
+
+                action_button.Content = "Transform";
+                conversionMode = FileTransformer.Mode.Transform;
+            }
         }
 
         private void chooseFile_button_Click(object sender, RoutedEventArgs e)
         {
-            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.Multiselect = true;
             Nullable<bool> result = dlg.ShowDialog();
 
             if (result == true)
             {
-                filePath = dlg.FileName;
-                file_textBox.Text = filePath;
+                filesPaths = dlg.FileNames;
+
+                filesNames = new string[filesPaths.Length];
+
+                for (int i = 0; i < filesPaths.Length; i++)
+                    filesNames[i] = Path.GetFileName(filesPaths[i]);
+
+                files_comboBox.ItemsSource = filesNames;
+
+                if (filesNames.Length > 1)
+                {
+                    files_comboBox.IsHitTestVisible = true;
+                    files_comboBox.IsEditable = false;
+                }
+
+                else
+                {
+                    files_comboBox.IsHitTestVisible = false;
+                    files_comboBox.IsEditable = true;
+                    files_comboBox.Text = filesNames[0];
+                }
+
+                #region Set save path to last chosen file's directory
+                savePath = filesPaths[filesPaths.Length - 1].Replace(filesNames[filesPaths.Length - 1], "");
+                savePath_textBox.Text = savePath;
+                #endregion
             }
         }
 
         private void savePath_button_Click(object sender, RoutedEventArgs e)
         {
-            using (CommonOpenFileDialog cofd = new CommonOpenFileDialog())
+            using (var fbd = new System.Windows.Forms.FolderBrowserDialog())
             {
-                cofd.IsFolderPicker = true;
-                CommonFileDialogResult result = cofd.ShowDialog();
+                System.Windows.Forms.DialogResult dialogResult = fbd.ShowDialog();
 
-
-                if (result == CommonFileDialogResult.Ok)
+                if (dialogResult == System.Windows.Forms.DialogResult.OK)
                 {
-                    savePath = cofd.FileName;
+                    savePath = fbd.SelectedPath;
                     savePath_textBox.Text = savePath;
                 }
             }
         }
 
-        private void encryption_checkBox_Click(object sender, RoutedEventArgs e)
+        private void extension_checkBox_Changed(object sender, RoutedEventArgs e)
         {
-            if (encryption_checkBox.IsChecked == true)
+            if (extension_checkBox.IsChecked ?? true)
             {
-                encryption_checkBox.Content = "Encryption Key (optional):";
-                encryption_passwordBox.IsEnabled = true;
+                extension_textBox.Text = string.Empty;
+                extension_textBox.Visibility = Visibility.Visible;
             }
 
             else
-            {
-                encryption_checkBox.Content = "Use Encryption";
-                encryption_passwordBox.Password = String.Empty;
-                encryption_passwordBox.IsEnabled = false;
-            }
-        }
-
-        private void cancel_button_Click(object sender, RoutedEventArgs e)
-        {
-            cts.Cancel();
+                extension_textBox.Visibility = Visibility.Hidden;
         }
 
         private async void action_button_Click(object sender, RoutedEventArgs e)
         {
+            if (isCurrentlyRunning)
+            {
+                cts.Cancel();
+                return;
+            }
+
             this.Height = WINDOW_HEIGHT;
 
-            if (!File.Exists(filePath))
+            #region Check if inputs are valid
+            for (int i = 0; i < filesPaths.Length; i++)
             {
-                MessageBox.Show("File not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!File.Exists(filesPaths[i]))
+                {
+                    MessageBox.Show($"\"{filesNames[i]}\" not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }    
+            }
+
+            if (!Directory.Exists(savePath))
+            {
+                MessageBox.Show($"Save directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            else if (!Directory.Exists(savePath))
+            else if (extension_textBox.Text.IndexOfAny(Path.GetInvalidFileNameChars()) != -1)
             {
-                MessageBox.Show("Directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Extension string includes invalid filename characters.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+            #endregion
 
-            FileTransformMode mode = (sender == transform_button) ? FileTransformMode.Transform : FileTransformMode.Restore;
+            if (extension_textBox.Text != null && extension_textBox.Text != "")
+                extension = extension_textBox.Text;
 
-            if (encryption_checkBox.IsChecked == true)
-            {
-                if (encryption_passwordBox.Password == String.Empty)
-                    encryptionKey = DEFAULT_ENCRYPTION_KEY;
-
-                else
-                    encryptionKey = encryption_passwordBox.Password;
-
-                using (SHA256Managed SHA256 = new SHA256Managed())
-                    encryptionKey = Encoding.UTF8.GetString(SHA256.ComputeHash(Encoding.UTF8.GetBytes(encryptionKey)));
-
-                encrypted = true;
-            }
-
-            if (encrypted)
-                encryptionKeyBytes = Encoding.UTF8.GetBytes(encryptionKey);
-
-            if (mode == FileTransformMode.Transform)
-                status_label.Content = "Transforming File...";
+            #region Set encryption key
+            if (encryption_passwordBox.Password == string.Empty)
+                encryptionKey = DEFAULT_ENCRYPTION_KEY;
 
             else
-                status_label.Content = "Restoring File...";
+                encryptionKey = encryption_passwordBox.Password;
+
+            using (SHA256Managed SHA256 = new SHA256Managed())
+                encryptionKeyBytes = SHA256.ComputeHash(Encoding.UTF8.GetBytes(encryptionKey));
+            #endregion
 
             progressBar.Visibility = Visibility.Visible;
-            transform_button.Visibility = Visibility.Hidden;
-            restore_button.Visibility = Visibility.Hidden;
-            cancel_button.Visibility = Visibility.Visible;
+            isCurrentlyRunning = true;
+            string textboxOldText = (string)action_button.Content;
+            action_button.Content = "Cancel";
+            tabControl.IsEnabled = false;
 
-            CancellationToken ct = cts.Token;
-            Progress<int> progressReporter = new Progress<int>(value => { progressBar.Value = value; });
-            Task<Dictionary<string, string>> task = Task.Run(() => FileConversion(mode, ct, progressReporter), ct);
-            Dictionary<string, string> fileInfo = await task;
+            TransformedFilesList = new List<(string fileName, string fileSize)>();
 
-            string errorMessage;
-
-            if (fileInfo.TryGetValue("error", out errorMessage))
+            #region Loop over selected files and convert them
+            for (int i = 0; i < filesPaths.Length; i++)
             {
-                status_label.Content = errorMessage;
-                string filename, filePath;
-
-                if (fileInfo.TryGetValue("filename", out filename))
+                if (!File.Exists(filesPaths[i]))
                 {
-                    filePath = Path.Combine(savePath, filename);
-
-                    if (File.Exists(filePath))
-                        File.Delete(filePath);
+                    MessageBox.Show($"File \"{filesNames[i]}\" not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    continue;
                 }
 
-                this.Height = WINDOW_HEIGHT;
-                progressBar.Value = 0;
-                transform_button.Visibility = Visibility.Visible;
-                restore_button.Visibility = Visibility.Visible;
-                cancel_button.Visibility = Visibility.Hidden;
-            }
+                if (conversionMode == FileTransformer.Mode.Transform)
+                    status_label.Content = $"Transforming \"{filesNames[i]}\"...";
 
-            else
-            {
-                status_label.Content = "Completed";
-                filename_textbox.Text = fileInfo["filename"];
-                filesize_textbox.Text = fileInfo["filesize"];
-                this.Height = WINDOW_HEIGHT_FULL;
+                else
+                    status_label.Content = $"Restoring \"{filesNames[i]}\"...";
 
-                if (delete_file_checkBox.IsChecked ?? false)
-                    File.Delete(filePath);
-            }
-
-            progressBar.Value = 0;
-            transform_button.Visibility = Visibility.Visible;
-            restore_button.Visibility = Visibility.Visible;
-            cancel_button.Visibility = Visibility.Hidden;
-            cts = new CancellationTokenSource();
-        }
-
-        /// <summary>
-        /// Call TransformFile() or RestoreFile() and return a dictionary with generated file's info.
-        /// </summary>
-        /// <returns>
-        /// A dictionary with information about the generated file.
-        /// </returns>
-        private Dictionary<string, string> FileConversion(FileTransformMode mode, CancellationToken ct, IProgress<int> progressReporter)
-        {
-            if (mode == FileTransformMode.Transform)
-                return TransformFile(filePath, savePath, encryptionKeyBytes, CHUNK_SIZE, HEADER_SIZE, ct, progressReporter);
-
-            else
-                return RestoreFile(filePath, savePath, encryptionKeyBytes, CHUNK_SIZE, HEADER_SIZE, FOOTER_SIZE, ct, progressReporter);
-        }
-
-        /// <summary>
-        /// Encrypt a file and return a dictionary with generated file's info.
-        /// </summary>
-        /// <returns>
-        /// A dictionary with information about the generated file.
-        /// </returns>
-        private Dictionary<string, string> TransformFile(string filePath, string savePath, byte[] encryptionBytes, int chunkSize, int headerSize, CancellationToken ct, IProgress<int> progressReporter = null)
-        {
-            Dictionary<string, string> fileInfo = new Dictionary<string, string>();
-            string randomFileName = Path.GetRandomFileName();
-            string newFilePath = Path.Combine(savePath, randomFileName);
-            bool encrypted = (encryptionBytes != null);
-            fileInfo.Add("filename", randomFileName);
-
-            using (var fs1 = new FileStream(filePath, FileMode.Open))
-            using (var fs2 = new FileStream(newFilePath, FileMode.Create))
-            using (SHA256Managed SHA256 = new SHA256Managed())
-            {
-                long bufferIndex = 0, encryptionIndex = 0;
-                byte[] buffer = new byte[chunkSize];
-                byte[] data, remainder;
-
-                #region Embed filename in new file
-                string[] splitPath = filePath.Split('\\');
-                byte[] originalFileNameBytes = Encoding.UTF8.GetBytes(splitPath[splitPath.Length - 1]);
-                Array.Resize(ref originalFileNameBytes, HEADER_SIZE);
-
-                if (encrypted)
-                    EncryptDecryptBytes(originalFileNameBytes, encryptionBytes, 0);
-
-                byte[] filenameData = Encoding.UTF8.GetBytes(BitConverter.ToString(originalFileNameBytes).Replace("-", string.Empty));
-                fs2.Write(filenameData, 0, originalFileNameBytes.Length);
-                encryptionIndex += originalFileNameBytes.Length;
-                #endregion
-
-                #region File bytes conversion loop (using chunks)
-                while (bufferIndex <= fs1.Length - chunkSize)
-                {
-                    fs1.Read(buffer, 0, chunkSize);
-                    SHA256.TransformBlock(buffer, 0, buffer.Length, null, 0);
-
-                    if (encrypted)
-                        EncryptDecryptBytes(buffer, encryptionBytes, encryptionIndex);
-
-                    data = Encoding.UTF8.GetBytes(Convert.ToBase64String(buffer));
-                    fs2.Write(data, 0, data.Length);
-
-                    bufferIndex += buffer.Length;
-                    encryptionIndex += buffer.Length;
-
-                    if (progressReporter != null)
-                        progressReporter?.Report((int)Math.Round((double)bufferIndex / fs1.Length * 100));
-
-                    if (ct.IsCancellationRequested)
-                    {
-                        fileInfo.Add("error", CANCEL_MESSAGE);
-                        return fileInfo;
-                    }
-                }
-                #endregion
-
-                #region Remaining bytes ( < chunkSize) conversion
-                int remainderLength = (int)(fs1.Length - bufferIndex);
-                remainder = new byte[remainderLength];
-
-                fs1.Read(remainder, 0, remainderLength);
-                SHA256.TransformFinalBlock(remainder, 0, remainderLength);
-                fileInfo.Add("hash", BitConverter.ToString(SHA256.Hash).Replace("-", string.Empty));
-
-                if (encrypted)
-                    EncryptDecryptBytes(remainder, encryptionBytes, encryptionIndex);
-
-                data = Encoding.UTF8.GetBytes(Convert.ToBase64String(remainder));
-                fs2.Write(data, 0, data.Length);
-                bufferIndex += remainder.Length;
-                encryptionIndex += remainder.Length;
-                #endregion
-
-                #region Embed SHA256 hash in new file
-                byte[] transformedHashBytes = SHA256.Hash;
-
-                if (encrypted)
-                    EncryptDecryptBytes(transformedHashBytes, encryptionBytes, encryptionIndex);
-
-                transformedHashBytes = Encoding.UTF8.GetBytes(BitConverter.ToString(transformedHashBytes).Replace("-", string.Empty));
-
-                fs2.Write(transformedHashBytes, 0, transformedHashBytes.Length);
-                #endregion
-
-                progressReporter?.Report(100);
-                fileInfo.Add("filesize", FormatFileSize(fs2.Length));
-                return fileInfo;
-            }
-        }
-
-        /// <summary>
-        /// Decrypt an encrypted file and return a dictionary with generated file's info.
-        /// </summary>
-        /// <returns>
-        /// A dictionary with information about the generated file.
-        /// </returns>
-        private Dictionary<string, string> RestoreFile(string filePath, string savePath, byte[] encryptionBytes, int chunkSize, int headerSize, int footerSize, CancellationToken ct, IProgress<int> progressReporter)
-        {
-            Dictionary<string, string> fileInfo = new Dictionary<string, string>();
-            string restoredFileName, newFileName, newFilePath;
-            bool encrypted = (encryptionBytes != null);
-
-            using (var fs1 = new FileStream(filePath, FileMode.Open))
-            {
-                #region Exctract filename from file
-                byte[] restoredFilenameBytes = new byte[headerSize];
-
-                fs1.Read(restoredFilenameBytes, 0, restoredFilenameBytes.Length);
+                CancellationToken ct = cts.Token;
+                Progress<int> progressReporter = new Progress<int>(value => { progressBar.Value = value; });
+                FileTransformer ft = new FileTransformer(encryptionKeyBytes, progressReporter);
+                Task<string> task;
+                string newFilePath = null;
 
                 try
                 {
-                    byte[] filenameData = hexToBytes(Encoding.UTF8.GetString(restoredFilenameBytes));
+                    if (conversionMode == FileTransformer.Mode.Transform)
+                        task = Task.Run(() => ft.TransformFile(filesPaths[i], savePath, ct, extension), ct);
 
-                    if (encrypted)
-                        EncryptDecryptBytes(filenameData, encryptionBytes, 0);
+                    else // (conversionMode == FileTransformer.Mode.Restore)
+                        task = Task.Run(() => ft.RestoreFile(filesPaths[i], savePath, ct), ct);
 
-                    restoredFileName = Encoding.UTF8.GetString(filenameData).TrimEnd('\0'); // Get rid of null bytes
+                    newFilePath = await task;
+
+                    TransformedFilesList.Add((Path.GetFileName(newFilePath), FormatFileSize(new FileInfo(newFilePath).Length)));
+
+                    if (delete_file_checkBox.IsChecked ?? false)
+                        File.Delete(filesPaths[i]);
                 }
 
-                catch
+                #region Error handling
+                catch (OperationCanceledException)
                 {
-                    MessageBox.Show("Could not restore original file name.\nPleas make sure you've entered the correct encryption key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    fileInfo.Add("error", "Error: Could not restore original file name.");
-                    return fileInfo;
+                    status_label.Content = $"Operation canceled.";
+                    ResetWindow(textboxOldText);
+                    return;
                 }
 
-                restoredFilenameBytes = Encoding.UTF8.GetBytes(restoredFileName);
-                fileInfo.Add("filename", restoredFileName);
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
 
-                newFileName = Encoding.UTF8.GetString(restoredFilenameBytes);
-                newFilePath = Path.Combine(savePath, newFileName);
+                finally
+                {
+                    progressBar.Value = 0;
+                }
                 #endregion
+            }
+            #endregion
 
+            int fileListLength = TransformedFilesList.Count();
+            ResetWindow(textboxOldText);
 
-                using (var fs2 = new FileStream(newFilePath, FileMode.Create))
-                using (SHA256Managed SHA256 = new SHA256Managed())
+            if (fileListLength > 0)
+            {
+                TransformedFilesListIndex = 0;
+
+                if (fileListLength == filesNames.Length)
+                    status_label.Content = "Conversion completed successfully";
+
+                else
+                    status_label.Content = $"{fileListLength}/{filesNames.Length} conversions completed successfully.";
+
+                filename_textBox.Text = TransformedFilesList[0].fileName;
+                filesize_textBox.Text = TransformedFilesList[0].fileSize;
+                this.Height = WINDOW_HEIGHT_FULL;
+
+                if (fileListLength > 1)
                 {
-                    long bufferIndex = headerSize, decryptionIndex = bufferIndex;
-                    byte[] buffer = new byte[chunkSize];
-                    byte[] data, remainder;
-
-                    #region File bytes conversion loop (using chunks)
-                    while (bufferIndex <= fs1.Length - chunkSize - FOOTER_SIZE)
-                    {
-                        fs1.Read(buffer, 0, chunkSize);
-                        data = Convert.FromBase64String(Encoding.UTF8.GetString(buffer));
-
-                        if (encrypted)
-                            EncryptDecryptBytes(data, encryptionBytes, decryptionIndex);
-
-                        fs2.Write(data, 0, data.Length);
-                        SHA256.TransformBlock(data, 0, data.Length, null, 0);
-                        bufferIndex += buffer.Length;
-                        decryptionIndex += data.Length;
-
-                        if (progressReporter != null)
-                            progressReporter?.Report((int)Math.Round((double)bufferIndex / fs1.Length * 100));
-
-                        if (ct.IsCancellationRequested)
-                        {
-                            fileInfo.Add("error", CANCEL_MESSAGE);
-                            return fileInfo;
-                        }
-                    }
-                    #endregion
-
-                    #region Remaining bytes ( < chunkSize) conversion
-                    int remainderLength = (int)(fs1.Length - bufferIndex - FOOTER_SIZE);
-                    remainder = new byte[remainderLength];
-
-                    fs1.Read(remainder, 0, remainderLength);
-                    data = Convert.FromBase64String(Encoding.UTF8.GetString(remainder));
-
-                    if (encrypted)
-                        EncryptDecryptBytes(data, encryptionBytes, decryptionIndex);
-
-                    fs2.Write(data, 0, data.Length);
-                    SHA256.TransformFinalBlock(data, 0, data.Length);
-                    decryptionIndex += data.Length;
-                    fileInfo.Add("filesize", FormatFileSize(fs2.Length));
-                    string hashString = BitConverter.ToString(SHA256.Hash).Replace("-", string.Empty);
-                    #endregion
-
-                    #region Exctract original file hash from file
-                    byte[] recoveredHashBytes = new byte[FOOTER_SIZE];
-                    fs1.Read(recoveredHashBytes, 0, FOOTER_SIZE);
-
-                    recoveredHashBytes = hexToBytes(Encoding.UTF8.GetString(recoveredHashBytes));
-
-                    if (encrypted)
-                        EncryptDecryptBytes(recoveredHashBytes, encryptionBytes, decryptionIndex);
-
-                    string recoveredHash = BitConverter.ToString(recoveredHashBytes).Replace("-", string.Empty);
-                    #endregion
-
-                    #region Test if original file and generated file hashes' match
-                    if (hashString != recoveredHash)
-                    {
-                        MessageBox.Show("Restored file hash doesn't match original file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        fileInfo.Add("error", "Error: Restored file's hash doesn't match original file.");
-                        return fileInfo;
-                    }
-                    #endregion
-
-                    return fileInfo;
+                    right_arrow_button.Visibility = Visibility.Visible;
+                    files_count_label.Content = $"- 1/{fileListLength} -";
                 }
+
+                else
+                    files_count_label.Content = string.Empty;
+            }
+
+            else
+            {
+                status_label.Content = "Conversion failed.";
+                this.Height = WINDOW_HEIGHT;
             }
         }
 
-        /// <summary>
-        /// Encrypt or decrypt a byte array with another byte array using XOR.
-        /// </summary>
-        /// <returns>
-        /// A refrence to the changed byte array.
-        /// </returns>
-        private byte[] EncryptDecryptBytes(byte[] bytes, byte[] encryptionKey, long index)
+        private void right_arrow_button_Click(object sender, RoutedEventArgs e)
         {
-            for (int i = 0; i < bytes.Length; i++)
-                bytes[i] ^= encryptionKey[(i+index) % encryptionKey.Length];
+            TransformedFilesListIndex++;
+            filename_textBox.Text = TransformedFilesList[TransformedFilesListIndex].fileName;
+            filesize_textBox.Text = TransformedFilesList[TransformedFilesListIndex].fileSize;
+            files_count_label.Content = $"- {TransformedFilesListIndex+1}/{TransformedFilesList.Count()} -";
 
-            return bytes;
+            if (TransformedFilesListIndex + 1 >= TransformedFilesList.Count())
+                right_arrow_button.Visibility = Visibility.Hidden;
+
+            left_arrow_button.Visibility = Visibility.Visible;
         }
 
-        /// <summary>
-        /// Converts a hex string to a byte array.
-        /// </summary>
-        /// <returns>
-        /// A byte array representation of a hex string.
-        /// </returns>
-        private byte[] hexToBytes(string hexString)
+        private void left_arrow_button_Click(object sender, RoutedEventArgs e)
         {
-            byte[] bytes = new byte[hexString.Length / 2];
+            TransformedFilesListIndex--;
+            filename_textBox.Text = TransformedFilesList[TransformedFilesListIndex].fileName;
+            filesize_textBox.Text = TransformedFilesList[TransformedFilesListIndex].fileSize;
+            files_count_label.Content = $"- {TransformedFilesListIndex + 1}/{TransformedFilesList.Count()} -";
 
-            for (int i = 0; i < hexString.Length; i += 2)
-                bytes[i / 2] = Convert.ToByte(hexString.Substring(i, 2), 16);
+            if (TransformedFilesListIndex - 1 < 0)
+                left_arrow_button.Visibility = Visibility.Hidden;
 
-            return bytes;
+            right_arrow_button.Visibility = Visibility.Visible;
         }
 
-        /// <summary>
-        /// Format file size from bytes to a readable format (KB, MB, GB, etc).
-        /// </summary>
-        /// <returns>
-        /// A string with a readable file size.
-        /// </returns>
+        #region Menu Items
+        private void MenuItem_Exit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void MenuItem_CheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            string newVersion;
+            try
+            {
+                using (var wc = new System.Net.WebClient())
+                {
+                    System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+                    newVersion = wc.DownloadString("https://raw.githubusercontent.com/MichaelYochpaz/FileTransformer/main/VERSION").Replace("\n", "");
+                }
+            }
+
+            catch
+            {
+                MessageBox.Show("Could not connect to server.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+
+            if (currentVersion.CompareTo(Version.Parse(newVersion)) < 0)
+            {
+                UpdateWindow window = new UpdateWindow(currentVersion.ToString(3), newVersion);
+                window.Owner = this;
+                window.Show();
+            }
+
+            else
+                MessageBox.Show("You are running the latest version of FileTransformer.", "", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void MenuItem_About_Clicked(object sender, RoutedEventArgs e)
+        {
+            AboutWindow window = new AboutWindow();
+            window.Owner = this;
+            window.Show();
+        }
+        #endregion
+
+        /// <summary>Format file size from bytes length to a readable format (KB, MB, GB, etc).</summary>
+        /// <param name="fileSizeBytes">File size in bytes.</param>
+        /// <returns>A string with file size in a readable format.</returns>
         private string FormatFileSize(long fileSizeBytes)
         {
             int unit = 1024;
