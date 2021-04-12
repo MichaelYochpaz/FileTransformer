@@ -6,7 +6,7 @@
 A tool for converting files to and from an encrypted Base64 text-based files.  
 Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releases/latest) ([changelog](https://github.com/MichaelYochpaz/FileTransformer/blob/main/CHANGELOG.md))
 
-## File Header Structure
+## Transformed File Structure
 <p align="center">
   <a href="#"><img src="Resources/file-structure.png"></a>
 </p>
