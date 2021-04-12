@@ -8,7 +8,7 @@ Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releas
 
 ## File Header Structure
 <p align="center">
-  <a href="#"><img src="Resources/file-structure.svg"></a>
+  <a href="#"><img src="Resources/file-structure.png"></a>
 </p>
 
 ## Features
@@ -23,5 +23,5 @@ Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releas
 </br>
 </br>
 <p align="center">
-  <a href="#"><img src="Resources/screenshot.png" height="400" a="#"></a>
+  <a href="#"><img src="Resources/screenshot.png" a="#"></a>
 </p>
