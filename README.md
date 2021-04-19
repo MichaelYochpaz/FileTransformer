@@ -41,10 +41,10 @@ Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releas
 </br>
 </br>
 <p align="center">
-  <a href="#"><img src="Resources/screenshot-1.png" a="#"></a>
+  <a href="#"><img src="Resources/screenshot-1.png" alt="Main window" width=300></a>
   </br>
-  <a href="#"><img src="Resources/screenshot-2.png" a="#"></a>
-  <a href="#"><img src="Resources/screenshot-3.png" a="#"></a>
+  <a href="#"><img src="Resources/screenshot-2.png" alt="Transform example"width=300></a>
+  <a href="#"><img src="Resources/screenshot-3.png" alt="Restore example"width=300></a>
   </br>
-  <a href="#"><img src="Resources/screenshot-HxD.png" a="#"></a>
+  <a href="#"><img src="Resources/screenshot-HxD.png" alt="HxD hex preview of a transformed file"width=600></a>
 </p>
