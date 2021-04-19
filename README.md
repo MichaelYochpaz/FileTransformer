@@ -3,25 +3,48 @@
 </p>
 
 # FileTransformer
-A tool for converting files to and from an encrypted Base64 text-based files.  
+A tool for converting files to and from encrypted Base64 text-based files.  
 Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releases/latest) ([changelog](https://github.com/MichaelYochpaz/FileTransformer/blob/main/CHANGELOG.md))
+
+<p align="center">
+  <a href="https://github.com/MichaelYochpaz/FileTransformer/releases/latest">
+    <img alt="Release" src="https://img.shields.io/github/v/release/MichaelYochpaz/FileTransformer">
+  </a>
+  <a href="https://github.com/MichaelYochpaz/FileTransformer/blob/master/LICENSE.md">
+    <img alt="License" src="https://img.shields.io/github/license/MichaelYochpaz/FileTransformer">
+  </a>
+  <a href="https://github.com/MichaelYochpaz/FileTransformer/issues">
+    <img alt="GitHub Issues" src="https://img.shields.io/github/issues/MichaelYochpaz/FileTransformer?style=flat-square&logo=github&logoColor=white">
+  </a>
+  <a href="https://github.com/MichaelYochpaz/FileTransformer/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/MichaelYochpaz/FileTransformer/total">
+  </a>
+</p>
+</br>
 
 ## Features
 * Convert any file to and from an encrypted text based (using Base64) file.
-* Data is encrypted before Base64 conversion using AES-GCM with an option to choose an encryption key.
+* Convert multiple files at once.
+* Data is encrypted using AES-GCM before Base64 conversion.
 * Data integrity is insured as part of the AES-GCM algorithm. Trying to restore a file that was altered will fail.
-* Original file's name is embedded within the transformed file, so transformed file's name can be changed without affecting original file.
+* Original filename is embedded within the transformed file, so filename of the transformed file can be altered without affecting original file.
 * An option to automatically delete source files after conversion.
-* An option to check for updates.
+</br>
 
 ## Transformed File Structure
 <p align="center">
   <a href="#"><img src="Resources/file-structure.png"></a>
 </p>
+</br>
 
-## Screenshot
+## Screenshots
 </br>
 </br>
 <p align="center">
-  <a href="#"><img src="Resources/screenshot.png" a="#"></a>
+  <a href="#"><img src="Resources/screenshot-1.png" a="#"></a>
+  </br>
+  <a href="#"><img src="Resources/screenshot-2.png" a="#"></a>
+  <a href="#"><img src="Resources/screenshot-3.png" a="#"></a>
+  </br>
+  <a href="#"><img src="Resources/screenshot-HxD.png" a="#"></a>
 </p>
