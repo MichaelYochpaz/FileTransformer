@@ -10,7 +10,7 @@ All notable changes to the script will be documented here.
 * Added an option to choose a custom extension for transformed files and removed previous random extension.
 * Switched encryption method from plain XOR to the far more secure AES-GCM algorithm.
 * Encrypting transformed files is no longer optional (using a default encryption key in case no key is chosen).
-* File hash verification (and with that file footer) were removed, now using AES GCM's authentication instead.
+* File hash verification (and with that the file footer) were removed, now using AES-GCM's authentication instead.
 * Added a file signature for transformed files to easily identify whether chosen files are valid.
 * Code optimization and better error handling.
 
