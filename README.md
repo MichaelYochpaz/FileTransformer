@@ -25,7 +25,7 @@ Latest version: [2.0.0](https://github.com/MichaelYochpaz/FileTransformer/releas
 ## Features
 * Convert any file to and from an encrypted text based (Base64) file.
 * File data is encrypted using AES-256-GCM before Base64 conversion.
-* Data integrity is insured as part of the GCM mode of operation. Trying to restore a transformed file that was altered will fail.
+* Data integrity is ensured as part of the GCM mode of operation. Trying to restore a transformed file that was altered will fail.
 * Original filename is embedded within the transformed file, so filename of the transformed file can be altered without affecting original file.
 </br>
 
