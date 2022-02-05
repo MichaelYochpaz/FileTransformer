@@ -36,9 +36,7 @@
   <PropertyGroup>
     <ManifestCertificateThumbprint>93DB98F0320825BEE352780E0AF8FAF77A26E18F</ManifestCertificateThumbprint>
   </PropertyGroup>
-  <PropertyGroup>
-    <ManifestKeyFile>FileTransformerSignKey.pfx</ManifestKeyFile>
-  </PropertyGroup>
+
   <PropertyGroup>
     <GenerateManifests>false</GenerateManifests>
   </PropertyGroup>
@@ -54,7 +52,6 @@
   <PropertyGroup>
     <StartupObject>FileTransformer.App</StartupObject>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>FileTransformerSignKey.pfx</AssemblyOriginatorKeyFile>
     <DelaySign>false</DelaySign>
   </PropertyGroup>
   <ItemGroup>
