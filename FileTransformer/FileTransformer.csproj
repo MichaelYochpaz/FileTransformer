@@ -51,7 +51,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>FileTransformer.App</StartupObject>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>False</SignAssembly>
     <DelaySign>false</DelaySign>
   </PropertyGroup>
   <ItemGroup>
